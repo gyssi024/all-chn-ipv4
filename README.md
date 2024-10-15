@@ -16,9 +16,7 @@ https://raw.githubusercontent.com/gyssi024/all-chn-ipv4/main/all-chn-cidr.txt
 
 此列表每天自动更新一次。
 
-## 使用说明
 
-[在这里添加如何使用这个列表的说明]
 
 ## 贡献
 
