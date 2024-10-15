@@ -30,13 +30,18 @@ jobs:
     - name: Run all-chn-ip.py
       run: python3 all-chn-ip.py
 
-    - name: Commit and push if changed
+    - name: Add timestamp to all-chn-cidr.txt
+      run: |
+        echo "# Last updated: $(date '+%Y-%m-%d %H:%M:%S')" >> all-chn-cidr.txt
+
+    - name: Commit and push
       run: |
         git config --global user.name 'GitHub Action'
         git config --global user.email 'action@github.com'
-        git add -A
+        git add all-chn-cidr.txt
         timestamp=$(date "+%Y-%m-%d %H:%M:%S")
-        git diff --quiet && git diff --staged --quiet || (git commit -m "Update IP ranges - $timestamp" && git push)
+        git commit -m "Update IP ranges - $timestamp" || echo "No changes to commit"
+        git push
 
     - name: Error notification
       if: failure()
