@@ -4,30 +4,49 @@ on:
   schedule:
     - cron: '30 0 * * *'  # 每天UTC时间00:30运行，相当于北京时间8:30
   workflow_dispatch:  # 允许手动触发
+  push:
+    branches: [ main ]  # 当推送到main分支时也触发
 
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: '3.x'
-    
+
+    - name: Set timezone to Asia/Shanghai
+      run: sudo timedatectl set-timezone 'Asia/Shanghai'
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install ipaddress
-    
-    - name: all-chn-ip.py
+
+    - name: Run all-chn-ip.py
       run: python3 all-chn-ip.py
-    
+
     - name: Commit and push if changed
       run: |
         git config --global user.name 'GitHub Action'
         git config --global user.email 'action@github.com'
         git add -A
-        git diff --quiet && git diff --staged --quiet || (git commit -m "Update IP ranges"; git push)
+        timestamp=$(date "+%Y-%m-%d %H:%M:%S")
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Update IP ranges - $timestamp" && git push)
 
+    - name: Error notification
+      if: failure()
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: 'Workflow failed: Update IP Ranges',
+            body: 'The workflow failed. Please check the logs for more information.'
+          })
