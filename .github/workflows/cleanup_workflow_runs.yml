@@ -1,1 +1,32 @@
+name: Cleanup Workflow Runs
+
+on:
+  schedule:
+    - cron: '0 0 1 */1 *'  # 每月1日的 UTC 00:00 执行
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Delete old workflow runs
+      uses: Mattraks/delete-workflow-runs@v2
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        retain_days: 30  # 保留最近30天的记录
+        keep_minimum_runs: 2  # 至少保留最新的2个运行记录
+
+    - name: Error notification
+      if: failure()
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: 'Workflow failed: Cleanup Workflow Runs',
+            body: 'The cleanup workflow failed. Please check the logs for more information.'
+          })
 
