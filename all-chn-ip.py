@@ -23,4 +23,4 @@ with open("all_chn_cidr.txt", "w") as f:
     for cidr in cn_cidrs:
         f.write(f"{cidr}\n")
 
-print("中国IP段已生成并保存到 all_cn_cidr.txt")
+print("中国IP段已生成并保存到 all_chn_cidr.txt")
