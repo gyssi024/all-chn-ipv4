@@ -19,8 +19,8 @@ with open("delegated-apnic-latest", "r") as f:
             cn_cidrs.append(str(ip))
 
 # 将结果写入文件
-with open("all_chn_cidr.txt", "w") as f:
+with open("all_cn_cidr.txt", "w") as f:
     for cidr in cn_cidrs:
         f.write(f"{cidr}\n")
 
-print("中国IP段已生成并保存到 all_chn_cidr.txt")
+print("中国IP段已生成并保存到 all_cn_cidr.txt")
