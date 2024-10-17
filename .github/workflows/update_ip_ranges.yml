@@ -1,30 +1,58 @@
-import os
-import urllib.request
-import ipaddress
+name: Update IP Ranges
 
-# 确保在正确的目录中操作
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+on:
+  schedule:
+    - cron: '30 0 * * *'  # 每天UTC时间00:30运行，相当于北京时间8:30
+  workflow_dispatch:  # 允许手动触发
+  push:
+    branches: [ main ]  # 当推送到main分支时也触发
 
-# 下载APNIC数据文件
-url = "https://ftp.apnic.net/apnic/stats/apnic/delegated-apnic-latest"
-urllib.request.urlretrieve(url, "delegated-apnic-latest")
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-# 解析文件并提取中国IP段
-cn_cidrs = []
-with open("delegated-apnic-latest", "r") as f:
-    for line in f:
-        if line.startswith("apnic|CN|ipv4"):
-            parts = line.split("|")
-            start_ip = parts[3]
-            count = int(parts[4])
-            
-            # 将IP范围转换为CIDR
-            ip = ipaddress.ip_network(f"{start_ip}/{32-count.bit_length()+1}", strict=False)
-            cn_cidrs.append(str(ip))
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
 
-# 将结果写入文件
-with open("all-chn-cidr.txt", "w") as f:
-    for cidr in cn_cidrs:
-        f.write(f"{cidr}\n")
+    - name: Set timezone to Asia/Shanghai
+      run: sudo timedatectl set-timezone 'Asia/Shanghai'
 
-print("中国IP段已生成并保存到 all-chn-cidr.txt")
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run all-chn-ip.py
+      run: python all-chn-ip.py
+
+    - name: Add timestamp to files
+      run: |
+        echo "# Last updated: $(date '+%Y-%m-%d %H:%M:%S')" >> all-chn-cidr.txt
+        echo "# Last updated: $(date '+%Y-%m-%d %H:%M:%S')" >> delegated-apnic-latest
+
+    - name: Commit and push
+      run: |
+        git config --local user.name 'github-actions[bot]'
+        git config --local user.email 'github-actions[bot]@users.noreply.github.com'
+        git add all-chn-cidr.txt delegated-apnic-latest
+        timestamp=$(date "+%Y-%m-%d %H:%M:%S")
+        git commit -m "Update IP ranges - $timestamp" || echo "No changes to commit"
+        git push
+
+    - name: Error notification
+      if: failure()
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: 'Workflow failed: Update IP Ranges',
+            body: 'The workflow failed. Please check the logs for more information.'
+          })
